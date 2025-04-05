@@ -34,49 +34,38 @@ graph LR
 ```
 # 📊 Technical Specifications
 
+## 🖼️ Project Screenshots
+
+<div align="center">
+  
+**1. Main Dashboard Interface**  
+![Dashboard View](https://i.imgur.com/example1.jpg)  
+*Real-time stock tracking during matches*
+
+**2. Analytics Panel**  
+![Data Analytics](https://i.imgur.com/example3.jpg)  
+*House performance metrics and volatility charts*
+
+</div>
+
 ## 🔢 Data Processing
 **Core Stack**  
 ```python
-# Primary dependencies
-import pandas as pd  # v1.5+ (DataFrames)
-import numpy as np   # v1.23+ (Numerics)
-from scipy import stats  # Statistical models
-```
-
-**Key Operations**  
-```python
-def calculate_volatility(house_data):
-    returns = house_data.pct_change()
-    return {
-        'daily_volatility': returns.std(),
-        'max_drawdown': (returns.cumsum() - returns.cumsum().cummax()).min()
-    }
+import pandas as pd  # v1.5+
+import numpy as np   # v1.23+
 ```
 
 ## 🕶️ VR Implementation
-**Technology Pipeline**  
 ```mermaid
-graph LR
-    A[Browser] -->|WebXR| B[Three.js]
-    B --> C[Shader Pipeline]
-    C --> D[VR Headset]
+graph TB
+    A[Browser] --> B[WebXR]
+    B --> C[Three.js]
 ```
 
-**Performance Targets**  
-| Metric        | Desktop Target | VR Target | Current Status |
-|--------------|---------------|-----------|----------------|
-| Frame Rate   | 60fps         | 90fps     | 🟢 68fps/🟡 87fps |
-| Latency      | <150ms        | <80ms     | 🟢 120ms/🔴 95ms |
+## ⚡ Performance
+| Metric        | Target     | Status   |
+|--------------|------------|----------|
+| FPS          | ≥60        | 🟢 68fps |
 
-## 📜 License & Compliance
-**MIT License Excerpt**  
-```plaintext
-Copyright 2023 [Your Name]
-
-Permission is hereby granted, free of charge...
-[Full text in LICENSE file]
-```
-
-**Verification**  
-[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)  
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/your/repo/badge)](https://securityscorecards.dev)
+## 📜 License
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
