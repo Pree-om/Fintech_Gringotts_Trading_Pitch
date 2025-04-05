@@ -199,7 +199,277 @@ def simulate_events():
 
 
 # ========== VR FUNCTIONS ==========
+def show_vr_mode():
+    """Launch VR mode in a new tab with proper WebXR handling"""
+    house_data = [{
+        "name": house,
+        "color": HOUSES[house]['color'],
+        "position": list(st.session_state.game['positions'][house])
+    } for house in HOUSES]
 
+    snitch_data = {
+        "active": st.session_state.game['snitch'],
+        "position": list(st.session_state.game['snitch_position']) if st.session_state.game['snitch'] else [0, 0]
+    }
+
+    html_content = f"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Quidditch VR</title>
+        <style>
+            body {{ 
+                margin: 0; 
+                overflow: hidden; 
+                background: black;
+                font-family: Arial, sans-serif;
+            }}
+            canvas {{ display: block; }}
+            #status {{
+                position: absolute;
+                top: 10px;
+                left: 10px;
+                color: white;
+                background: rgba(0,0,0,0.7);
+                padding: 5px 10px;
+                border-radius: 5px;
+                z-index: 100;
+            }}
+            #vr-button {{
+                position: absolute;
+                bottom: 20px;
+                left: 20px;
+                padding: 10px 20px;
+                background: #D4AF37;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                font-weight: bold;
+                cursor: pointer;
+                z-index: 100;
+            }}
+        </style>
+    </head>
+    <body>
+        <div id="status">Initializing VR...</div>
+        <button id="vr-button" disabled>ENTER VR</button>
+
+        <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/webxr/VRButton.js"></script>
+
+        <script>
+            // Configuration
+            const houseData = {json.dumps(house_data)};
+            const snitchData = {json.dumps(snitch_data)};
+            
+            // Core variables
+            let scene, camera, renderer, controls;
+            let vrSession = null;
+            
+            // DOM elements
+            const statusEl = document.getElementById('status');
+            const vrButton = document.getElementById('vr-button');
+            
+            function init() {{
+                try {{
+                    // 1. Initialize scene
+                    scene = new THREE.Scene();
+                    camera = new THREE.PerspectiveCamera(
+                        75, 
+                        window.innerWidth / window.innerHeight, 
+                        0.1, 
+                        1000
+                    );
+                    
+                    // 2. Set up renderer
+                    renderer = new THREE.WebGLRenderer({{ antialias: true }});
+                    renderer.setPixelRatio(window.devicePixelRatio);
+                    renderer.setSize(window.innerWidth, window.innerHeight);
+                    renderer.xr.enabled = true;
+                    document.body.appendChild(renderer.domElement);
+                    
+                    // 3. Add lighting
+                    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+                    scene.add(ambientLight);
+                    
+                    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                    directionalLight.position.set(0, 10, 10);
+                    scene.add(directionalLight);
+                    
+                    // 4. Create pitch
+                    const pitch = new THREE.Mesh(
+                        new THREE.PlaneGeometry(100, 70),
+                        new THREE.MeshStandardMaterial({{ 
+                            color: 0x2a623d,
+                            roughness: 0.8 
+                        }})
+                    );
+                    pitch.rotation.x = -Math.PI / 2;
+                    scene.add(pitch);
+                    
+                    // 5. Add hoops
+                    const hoopGeometry = new THREE.TorusGeometry(3, 0.5, 16, 32);
+                    const hoopMaterial = new THREE.MeshBasicMaterial({{ color: 0xD4AF37 }});
+                    [-40, 0, 40].forEach(x => {{
+                        const hoop = new THREE.Mesh(hoopGeometry, hoopMaterial);
+                        hoop.position.set(x, 8, -30);
+                        hoop.rotation.x = Math.PI / 2;
+                        scene.add(hoop);
+                    }});
+                    
+                    // 6. Add seekers
+                    houseData.forEach(house => {{
+                        const geometry = new THREE.SphereGeometry(1.5, 32, 32);
+                        const material = new THREE.MeshPhongMaterial({{
+                            color: parseInt(house.color.substring(1), 16),
+                            emissive: parseInt(house.color.substring(1), 16)
+                        }});
+                        const seeker = new THREE.Mesh(geometry, material);
+                        seeker.position.set(
+                            house.position[0] * 20, 
+                            3, 
+                            house.position[1] * 20
+                        );
+                        scene.add(seeker);
+                    }});
+                    
+                    // 7. Add snitch if active
+                    if (snitchData.active) {{
+                        const geometry = new THREE.SphereGeometry(0.8, 32, 32);
+                        const material = new THREE.MeshStandardMaterial({{
+                            color: 0xD4AF37,
+                            metalness: 0.9,
+                            roughness: 0.1
+                        }});
+                        const snitch = new THREE.Mesh(geometry, material);
+                        snitch.position.set(
+                            snitchData.position[0] * 25,
+                            10,
+                            snitchData.position[1] * 25
+                        );
+                        scene.add(snitch);
+                    }}
+                    
+                    // 8. Position camera
+                    camera.position.set(0, 30, 50);
+                    camera.lookAt(0, 0, 0);
+                    
+                    // 9. Set up controls
+                    controls = new THREE.OrbitControls(camera, renderer.domElement);
+                    controls.enableDamping = true;
+                    controls.dampingFactor = 0.05;
+                    
+                    // 10. Set up VR button
+                    setupVRButton();
+                    
+                    // 11. Start animation
+                    animate();
+                    
+                    statusEl.textContent = "Ready! Click ENTER VR";
+                    
+                }} catch (error) {{
+                    handleError(error);
+                }}
+            }}
+            
+            function setupVRButton() {{
+                vrButton.disabled = false;
+                
+                vrButton.addEventListener('click', async () => {{
+                    if (!navigator.xr) {{
+                        statusEl.textContent = "WebXR not supported in your browser";
+                        return;
+                    }}
+                    
+                    try {{
+                        if (!vrSession) {{
+                            vrSession = await navigator.xr.requestSession('immersive-vr');
+                            renderer.xr.setSession(vrSession);
+                            
+                            vrButton.textContent = "EXIT VR";
+                            statusEl.textContent = "VR mode active";
+                            
+                            vrSession.addEventListener('end', () => {{
+                                vrSession = null;
+                                vrButton.textContent = "ENTER VR";
+                                statusEl.textContent = "VR session ended";
+                            }});
+                        }} else {{
+                            await vrSession.end();
+                        }}
+                    }} catch (error) {{
+                        handleError(error);
+                    }}
+                }});
+            }}
+            
+            function animate() {{
+                renderer.setAnimationLoop(() => {{
+                    if (!vrSession) {{
+                        controls.update();
+                    }}
+                    renderer.render(scene, camera);
+                }});
+            }}
+            
+            function handleError(error) {{
+                console.error("VR Error:", error);
+                statusEl.textContent = `Error: ${{error.message}}`;
+                statusEl.style.color = "#ff4444";
+                vrButton.disabled = true;
+            }}
+            
+            // Handle window resize
+            window.addEventListener('resize', () => {{
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }});
+            
+            // Start initialization when DOM is ready
+            document.addEventListener('DOMContentLoaded', init);
+        </script>
+    </body>
+    </html>
+    """
+
+    # Display in Streamlit
+    st.markdown("## 🧙‍♂️ Immersive Quidditch VR")
+    st.markdown("""
+    <div style="background: rgba(0,0,0,0.1); padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+        <p>For the best experience:</p>
+        <ol>
+            <li>Use Chrome or Edge on desktop</li>
+            <li>Enable WebXR in browser flags if needed</li>
+            <li>VR headset recommended for full immersion</li>
+        </ol>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Create download link that opens in new tab
+    b64 = base64.b64encode(html_content.encode()).decode()
+    payload_url = f"data:text/html;base64,{b64}"
+    
+    st.markdown(f"""
+    <a href="{payload_url}" target="_blank">
+        <button style='
+            padding: 12px 24px;
+            background: linear-gradient(#D4AF37, #F0E68C);
+            color: #000;
+            font-weight: bold;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+        '>
+            🕶️ Launch VR Experience
+        </button>
+    </a>
+    """, unsafe_allow_html=True)
 
 
 # ========== ENCHANTED VISUALIZATION ==========
