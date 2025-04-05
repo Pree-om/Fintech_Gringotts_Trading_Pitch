@@ -39,11 +39,11 @@ graph LR
 <div align="center">
   
 **1. Main Dashboard Interface**  
-![Dashboard View](https://i.imgur.com/example1.jpg)  
+![Dashboard View](Dashboard.png)  
 *Real-time stock tracking during matches*
 
 **2. Analytics Panel**  
-![Data Analytics](https://i.imgur.com/example3.jpg)  
+![Data Analytics](Market.png)  
 *House performance metrics and volatility charts*
 
 </div>
