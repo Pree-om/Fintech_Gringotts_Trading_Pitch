@@ -14,7 +14,7 @@
 | Quaffle Goal   | +10 pts        | 20% chance  |
 | Golden Snitch  | +150 pts       | After 2 min |
 
-## 📊 Data Visualization
+## 📊 Data-Visualization
 ```python
 import plotly.express as px
 fig = px.line(stock_data, title='House Performance')
